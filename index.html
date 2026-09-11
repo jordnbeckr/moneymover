@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debt Recovery — Jordan Becker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --white: #fff; --gray-50: #f8f9fa; --gray-100: #f1f3f5; --gray-200: #e9ecef;
+  --gray-300: #dee2e6; --gray-400: #ced4da; --gray-500: #adb5bd; --gray-600: #6c757d;
+  --gray-700: #495057; --black: #1a1a1a;
+  --blue: #2563eb; --blue-light: #eff6ff; --blue-mid: #93c5fd;
+  --green: #16a34a; --green-light: #f0fdf4; --green-mid: #86efac;
+  --amber: #d97706; --amber-light: #fffbeb; --amber-mid: #fcd34d;
+  --red: #dc2626; --red-light: #fef2f2; --red-mid: #fca5a5;
+  --r-sm: 6px; --r-md: 10px; --r-lg: 14px;
+}
+body { font-family: 'Inter', system-ui, sans-serif; background: var(--gray-50); color: var(--black); min-height: 100vh; font-size: 14px; line-height: 1.5; }
+
+/* ── Top bar ── */
+.topbar {
+  position: sticky; top: 0; z-index: 50;
+  background: var(--white); border-bottom: 1px solid var(--gray-200);
+  display: flex; align-items: center; gap: 0; flex-wrap: wrap;
+}
+.topbar-brand {
+  padding: 0 20px; height: 52px; display: flex; align-items: center;
+  font-size: 13px; font-weight: 600; color: var(--black); white-space: nowrap;
+  border-right: 1px solid var(--gray-200);
+  flex-shrink: 0;
+}
+.topbar-brand span { font-weight: 400; color: var(--gray-500); margin-left: 6px; }
+.topbar-filters { display: flex; align-items: center; gap: 2px; padding: 0 12px; flex: 1; flex-wrap: wrap; }
+.filter-btn {
+  display: flex; align-items: center; gap: 5px; height: 52px; padding: 0 12px;
+  border: none; background: transparent; font-family: inherit; font-size: 13px;
+  color: var(--gray-600); cursor: pointer; white-space: nowrap;
+  border-bottom: 2px solid transparent; transition: color .1s, border-color .1s;
+}
+.filter-btn:hover { color: var(--black); }
+.filter-btn.active { color: var(--blue); border-bottom-color: var(--blue); font-weight: 500; }
+.filter-count { font-size: 11px; background: var(--gray-100); color: var(--gray-600); padding: 1px 6px; border-radius: 10px; }
+.filter-btn.active .filter-count { background: var(--blue-light); color: var(--blue); }
+
+/* ── Stats bar ── */
+.statsbar {
+  background: var(--white); border-bottom: 1px solid var(--gray-200);
+  display: flex; align-items: stretch; flex-wrap: wrap;
+}
+.stat-cell {
+  display: flex; flex-direction: column; justify-content: center;
+  padding: 10px 20px; border-right: 1px solid var(--gray-100); min-width: 140px;
+}
+.stat-cell:last-child { border-right: none; }
+.stat-label { font-size: 10px; color: var(--gray-500); text-transform: uppercase; letter-spacing: .04em; margin-bottom: 2px; }
+.stat-value { font-size: 17px; font-weight: 600; color: var(--black); font-variant-numeric: tabular-nums; line-height: 1.2; }
+.stat-sub { font-size: 11px; color: var(--gray-600); margin-top: 1px; }
+.score-cell { cursor: pointer; }
+.score-cell:hover { background: var(--gray-50); }
+.score-input-inline { font-size: 17px; font-weight: 600; width: 70px; border: 1.5px solid var(--blue); border-radius: var(--r-sm); padding: 2px 6px; font-family: inherit; color: var(--black); background: var(--white); }
+
+/* ── Main grid ── */
+.main { padding: 20px; display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; align-items: start; }
+@media (max-width: 600px) { .main { padding: 12px; grid-template-columns: 1fr; } }
+
+/* ── Account cards ── */
+.acct-card {
+  background: var(--white); border: 1px solid var(--gray-200);
+  border-radius: var(--r-lg); overflow: hidden;
+}
+.acct-card:hover { border-color: var(--gray-300); }
+.acct-card.resolved { background: var(--green-light); border-color: var(--green-mid); }
+.acct-card.asset { border-color: var(--blue-mid); }
+
+.acct-header { display: flex; align-items: flex-start; justify-content: space-between; padding: 12px 14px 8px; cursor: pointer; gap: 10px; }
+.acct-name { font-size: 13px; font-weight: 500; color: var(--black); }
+.acct-meta { font-size: 11px; color: var(--gray-500); margin-top: 1px; }
+.acct-right { text-align: right; flex-shrink: 0; }
+.acct-amount { font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.acct-amount.green { color: var(--green); }
+.acct-orig { font-size: 10px; color: var(--gray-400); font-variant-numeric: tabular-nums; }
+
+/* Compact bars */
+.bars { padding: 0 14px 8px; display: flex; flex-direction: column; gap: 4px; }
+.bar-row { display: flex; align-items: center; gap: 8px; }
+.bar-lbl { font-size: 10px; color: var(--gray-500); width: 46px; text-align: right; flex-shrink: 0; }
+.bar-lbl.green { color: var(--green); }
+.bar-track { flex: 1; height: 5px; background: var(--gray-100); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+.bar-fill.gray { background: #9ca3af; }
+.bar-fill.green { background: var(--green); }
+.bar-fill.faded { background: var(--gray-300); }
+.bar-amt { font-size: 11px; font-variant-numeric: tabular-nums; min-width: 58px; display: flex; align-items: center; gap: 4px; }
+.bar-amt.green { color: var(--green); }
+
+.pct-pill { font-size: 9px; background: var(--green-light); color: var(--green); padding: 1px 5px; border-radius: 8px; border: 1px solid var(--green-mid); white-space: nowrap; }
+
+/* Badge row */
+.card-footer { display: flex; align-items: center; justify-content: space-between; padding: 0 14px 10px; }
+.badge { display: inline-block; font-size: 10px; font-weight: 500; padding: 2px 8px; border-radius: 20px; }
+.badge.green { background: var(--green-light); color: var(--green); border: 1px solid var(--green-mid); }
+.badge.blue { background: var(--blue-light); color: var(--blue); border: 1px solid var(--blue-mid); }
+.badge.amber { background: var(--amber-light); color: var(--amber); border: 1px solid var(--amber-mid); }
+.badge.red { background: var(--red-light); color: var(--red); border: 1px solid var(--red-mid); }
+.badge.gray { background: var(--gray-100); color: var(--gray-600); border: 1px solid var(--gray-300); }
+.btn-edit { font-size: 11px; font-family: inherit; padding: 3px 10px; border-radius: var(--r-sm); border: 1px solid var(--gray-300); background: var(--white); color: var(--gray-700); cursor: pointer; }
+.btn-edit:hover { background: var(--gray-100); }
+
+/* Expanded notes */
+.acct-detail { border-top: 1px solid var(--gray-100); padding: 10px 14px; background: var(--gray-50); display: none; }
+.acct-card.resolved .acct-detail { background: #e9fef0; border-top-color: var(--green-mid); }
+.acct-detail.open { display: block; }
+.acct-notes { font-size: 12px; color: var(--gray-700); line-height: 1.65; }
+
+/* Section divider */
+.section-divider { grid-column: 1 / -1; font-size: 11px; color: var(--gray-400); font-weight: 500; padding: 6px 0 2px; border-bottom: 1px solid var(--gray-200); }
+
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 16px; opacity: 0; pointer-events: none; transition: opacity .15s; }
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal { background: var(--white); border-radius: var(--r-lg); padding: 22px; width: 100%; max-width: 420px; max-height: 90vh; overflow-y: auto; transform: translateY(8px); transition: transform .15s; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+.modal-overlay.open .modal { transform: translateY(0); }
+.modal-title { font-size: 14px; font-weight: 600; color: var(--black); margin-bottom: 16px; }
+.field { margin-bottom: 12px; }
+.field label { display: block; font-size: 10px; color: var(--gray-500); margin-bottom: 4px; font-weight: 500; text-transform: uppercase; letter-spacing: .04em; }
+.field input, .field select, .field textarea { width: 100%; padding: 7px 9px; border: 1px solid var(--gray-300); border-radius: var(--r-sm); font-family: inherit; font-size: 13px; color: var(--black); background: var(--white); }
+.field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,.1); }
+.field textarea { resize: vertical; min-height: 64px; }
+.modal-footer { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.btn-cancel { font-size: 13px; font-family: inherit; padding: 6px 14px; border-radius: var(--r-sm); border: 1px solid var(--gray-300); background: var(--white); color: var(--gray-700); cursor: pointer; }
+.btn-save { font-size: 13px; font-family: inherit; padding: 6px 14px; border-radius: var(--r-sm); border: 1px solid var(--blue); background: var(--blue); color: var(--white); cursor: pointer; font-weight: 500; }
+.btn-cancel:hover { background: var(--gray-100); }
+.btn-save:hover { background: #1d4ed8; }
+
+.toast { position: fixed; bottom: 20px; right: 20px; background: var(--black); color: var(--white); font-size: 13px; padding: 9px 14px; border-radius: var(--r-md); opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; pointer-events: none; z-index: 200; }
+.toast.show { opacity: 1; transform: translateY(0); }
+.empty { grid-column: 1/-1; padding: 40px 0; text-align: center; color: var(--gray-500); }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: 0s !important; } }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-brand">Jordan Becker <span>debt tracker</span></div>
+  <nav class="topbar-filters">
+    <button class="filter-btn active" onclick="setFilter('all',this)">All <span class="filter-count" id="count-all">0</span></button>
+    <button class="filter-btn" onclick="setFilter('action',this)">Needs action <span class="filter-count" id="count-action">0</span></button>
+    <button class="filter-btn" onclick="setFilter('offers',this)">Active offers <span class="filter-count" id="count-offers">0</span></button>
+    <button class="filter-btn" onclick="setFilter('resolved',this)">Resolved <span class="filter-count" id="count-resolved">0</span></button>
+    <button class="filter-btn" onclick="setFilter('assets',this)">Credit cards <span class="filter-count" id="count-assets">0</span></button>
+  </nav>
+</header>
+
+<div class="statsbar">
+  <div class="stat-cell score-cell" onclick="startEditScore()" title="Click to update">
+    <div class="stat-label">Credit score</div>
+    <div id="score-display" class="stat-value">559</div>
+    <div class="stat-sub">tap to update</div>
+  </div>
+  <div class="stat-cell"><div class="stat-label">Total owed</div><div id="stat-owed" class="stat-value">—</div></div>
+  <div class="stat-cell"><div class="stat-label">If offers accepted</div><div id="stat-offers" class="stat-value">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Paid to resolve</div><div id="stat-paid" class="stat-value">—</div><div id="stat-saved" class="stat-sub">—</div></div>
+  <div class="stat-cell"><div class="stat-label">Accounts resolved</div><div id="stat-resolved" class="stat-value">—</div></div>
+</div>
+
+<main class="main" id="accounts-list"></main>
+
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-title" id="modal-title">Edit account</div>
+    <div class="field"><label>Current balance ($)</label><input type="number" id="f-current" step="0.01"></div>
+    <div class="field"><label>Settlement offer ($ — blank if none)</label><input type="number" id="f-offer" step="0.01"></div>
+    <div class="field"><label>Offer % off (blank if none)</label><input type="number" id="f-pct" step="1"></div>
+    <div class="field"><label>Creditor / servicer</label><input type="text" id="f-creditor"></div>
+    <div class="field"><label>Falls off report</label><input type="text" id="f-falloff" placeholder="e.g. Mar 2031"></div>
+    <div class="field"><label>Status</label>
+      <select id="f-status">
+        <option value="active">Active — building credit</option>
+        <option value="resolved">Resolved</option>
+        <option value="offer-active">Offer active</option>
+        <option value="offer-expired">Offer expired — call to confirm</option>
+        <option value="no-offer">No offer — negotiate</option>
+        <option value="delinquent">Delinquent — call Nelnet</option>
+        <option value="current">Current — keep paying</option>
+      </select>
+    </div>
+    <div class="field"><label>Notes</label><textarea id="f-notes"></textarea></div>
+    <div class="modal-footer">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveEdit()">Save changes</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_DATA = {
+  score: "559",
+  accounts: [
+    { id: "discover", name: "Discover it Secured", type: "asset", creditor: "Discover", original: 200, current: 20, offer: null, offerPct: null, status: "active", falloff: null, notes: "Keep balance under $20 (10% utilization). Pay after statement generates, before the due date. Never carry a balance." },
+    { id: "affirm-a5dk", name: "Affirm — A5DK", type: "debt", creditor: "Affirm", original: 116, current: 0, offer: 52, offerPct: 55, status: "resolved", falloff: "Oct 2031", notes: "Settled Jul 2026 for $52 (55% off). Call Affirm at (855) 423-3729 to request goodwill deletion." },
+    { id: "affirm-pekv", name: "Affirm — PEKV", type: "debt", creditor: "TrueAccord / Affirm", original: 123, current: 0, offer: 61.82, offerPct: 49, status: "resolved", falloff: "Oct 2031", notes: "Settled Jul 2026 for $61.82 (49% off) via TrueAccord. Request goodwill deletion directly from TrueAccord." },
+    { id: "usbank", name: "US Bank / Sunrise Credit", type: "debt", creditor: "Sunrise Credit Services", original: 7253, current: 7253, offer: 1813.31, offerPct: 75, status: "offer-expired", falloff: "Mar 2031", notes: "Offer of $1,813.31 expired Apr 30, 2026. Call 833-362-0181 to confirm if still valid and request new deadline in writing. Ask for pay-for-delete. Biggest single score move available." },
+    { id: "amex", name: "American Express", type: "debt", creditor: "American Express", original: 2146, current: 2146, offer: 750, offerPct: 65, status: "offer-active", falloff: "Sep 2031", notes: "Settlement offer: $750 (65% off $2,146). Call (800) 874-2717. Get written confirmation before paying. Ask for pay-for-delete — they rarely agree but worth asking." },
+    { id: "apple-card", name: "Apple Card / Goldman Sachs", type: "debt", creditor: "Halsted Financial / LVNV", original: 1417, current: 1417, offer: 765.19, offerPct: 46, status: "offer-active", falloff: "Jul 2031", notes: "Updated offer: $765.19 (46% off) via Halsted. Call (888) 397-8675 — do not use portal. Counter at 50–55% off (~$638–$709) before accepting. Ask for pay-for-delete in writing." },
+    { id: "upstart-dna", name: "Upstart / Crown Asset Management", type: "debt", creditor: "D&A Services (for Crown Asset Mgmt)", original: 1871.75, current: 1871.75, offer: 1123.05, offerPct: 40, status: "offer-active", falloff: "Oct 2031", notes: "D&A Services letter dated 09/04/2026. Balance: $1,871.75. Offer: $1,123.05 (40% off). Call D&A at 877-685-5791 — do not use their web portal. Crown bought this debt for pennies so counter at 50–55% off (~$840–$935) before accepting. Ask for pay-for-delete in writing. D&A account #10688307." },
+    { id: "cap-one-quicksilver", name: "Capital One Quicksilver", type: "debt", creditor: "Midland Credit Management", original: 2345, current: 2345.11, offer: null, offerPct: null, status: "no-offer", falloff: "May 2031", notes: "Now with Midland Credit Management (MCM, account #338863072). Portal shows payment plans only — no settlement yet. Call MCM to negotiate a settlement directly." },
+    { id: "cap-one-platinum", name: "Capital One Platinum", type: "debt", creditor: "Capital One", original: 991, current: 991, offer: null, offerPct: null, status: "no-offer", falloff: "Jul 2031", notes: "No offer yet. Approach after higher-priority accounts are resolved." },
+    { id: "chase", name: "JPMCB / Chase", type: "debt", creditor: "Chase", original: 3724, current: 3724, offer: null, offerPct: null, status: "no-offer", falloff: "Aug 2031", notes: "No offer yet. Negotiate directly with Chase, or wait for a collection agency to acquire it — debt buyers have more flexibility for pay-for-delete." },
+    { id: "portfolio", name: "Portfolio Recovery / Citibank", type: "debt", creditor: "Portfolio Recovery Associates", original: 2898, current: 2898, offer: null, offerPct: null, status: "no-offer", falloff: "Apr 2031", notes: "Third-party debt buyer — more room to negotiate. Contact in writing only (120 Corporate Blvd Ste 100, Norfolk VA 23502). Start offer at 40–50% off. Never acknowledge the debt over the phone." },
+    { id: "td-target", name: "TD Bank / Target", type: "debt", creditor: "TD Bank", original: 559, current: 559, offer: null, offerPct: null, status: "no-offer", falloff: "Aug 2031", notes: "Small balance. Negotiate a settlement — start at 50% off. Falls off Aug 2031 regardless." },
+    { id: "charter", name: "Charter Communications", type: "debt", creditor: "Sunrise Credit (separate account)", original: 191, current: 250, offer: null, offerPct: null, status: "no-offer", falloff: "Feb 2032", notes: "Small cable bill collection. Call Sunrise at (800) 645-9824. Offer to pay in full ($250) in exchange for deletion from all 3 bureaus." },
+    { id: "nelnet-bad", name: "Nelnet — 3 delinquent loans", type: "debt", creditor: "Dept of Education / Nelnet", original: 11000, current: 10317, offer: null, offerPct: null, status: "delinquent", falloff: "Jun 2032", notes: "90–150 days past due as of late 2025. Call (888) 486-4722 to confirm rehabilitation enrollment. Completing loan rehabilitation removes the late payment history from your report entirely." },
+    { id: "nelnet-good", name: "Nelnet — 2 current loans", type: "debt", creditor: "Dept of Education / Nelnet", original: 6500, current: 6754, offer: null, offerPct: null, status: "current", falloff: null, notes: "Open and never late. No action needed — keep making payments on schedule." },
+  ]
+};
+
+const STATUS = {
+  "active":         { label: "Active — building credit",        cls: "blue" },
+  "resolved":       { label: "Resolved",                        cls: "green" },
+  "offer-active":   { label: "Offer active",                    cls: "green" },
+  "offer-expired":  { label: "Offer expired — call to confirm", cls: "red" },
+  "no-offer":       { label: "No offer — negotiate",            cls: "gray" },
+  "delinquent":     { label: "Delinquent — call Nelnet",        cls: "amber" },
+  "current":        { label: "Current — keep paying",           cls: "green" },
+};
+
+let data = JSON.parse(localStorage.getItem("jb-debt-tracker-v2") || "null") || JSON.parse(JSON.stringify(DEFAULT_DATA));
+let currentFilter = "all";
+let openCards = new Set();
+let editingId = null;
+
+function save() { localStorage.setItem("jb-debt-tracker-v2", JSON.stringify(data)); }
+const fmt = n => "$" + Number(n).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+
+function calcStats() {
+  const debts = data.accounts.filter(a => a.type === "debt");
+  const totalOwed = debts.reduce((s,a) => s + (parseFloat(a.current)||0), 0);
+  const withOffers = debts.filter(a => a.offer && !["resolved","current"].includes(a.status)).reduce((s,a) => s + parseFloat(a.offer), 0);
+  const resolved = debts.filter(a => a.status === "resolved");
+  const totalPaid = resolved.reduce((s,a) => s + (parseFloat(a.offer)||0), 0);
+  const totalSaved = resolved.reduce((s,a) => s + ((parseFloat(a.original)||0) - (parseFloat(a.offer)||parseFloat(a.original)||0)), 0);
+  return { totalOwed, withOffers, totalPaid, totalSaved, resolvedCount: resolved.length };
+}
+
+function calcCounts() {
+  const a = data.accounts;
+  return {
+    all: a.length,
+    action: a.filter(x => !["resolved","active","current"].includes(x.status)).length,
+    offers: a.filter(x => x.offer && !["resolved","active","current"].includes(x.status)).length,
+    resolved: a.filter(x => x.status === "resolved").length,
+    assets: a.filter(x => x.type === "asset").length,
+  };
+}
+
+function filterAccounts() {
+  return data.accounts.filter(a => {
+    if (currentFilter === "all") return true;
+    if (currentFilter === "action") return !["resolved","active","current"].includes(a.status);
+    if (currentFilter === "offers") return a.offer && !["resolved","active","current"].includes(a.status);
+    if (currentFilter === "resolved") return a.status === "resolved";
+    if (currentFilter === "assets") return a.type === "asset";
+    return true;
+  });
+}
+
+function setFilter(f, el) {
+  currentFilter = f;
+  document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+  el.classList.add("active");
+  renderAccounts();
+}
+
+function toggleCard(id) {
+  if (openCards.has(id)) openCards.delete(id);
+  else openCards.add(id);
+  const d = document.getElementById("detail-" + id);
+  if (d) d.classList.toggle("open", openCards.has(id));
+}
+
+function renderAccounts() {
+  const list = document.getElementById("accounts-list");
+  const filtered = filterAccounts();
+  if (!filtered.length) { list.innerHTML = '<div class="empty">No accounts in this view.</div>'; return; }
+  const active = filtered.filter(a => a.status !== "resolved");
+  const resolved = filtered.filter(a => a.status === "resolved");
+  let html = active.map(renderCard).join("");
+  if (resolved.length && active.length) html += `<div class="section-divider">Resolved</div>`;
+  html += resolved.map(renderCard).join("");
+  list.innerHTML = html;
+}
+
+function renderCard(a) {
+  const isResolved = a.status === "resolved";
+  const isAsset = a.type === "asset";
+  const st = STATUS[a.status] || STATUS["no-offer"];
+  const barMax = Math.max(parseFloat(a.original)||1, parseFloat(a.current)||0);
+  const currentPct = Math.min(100, ((parseFloat(a.current)||0) / barMax) * 100);
+  const isOpen = openCards.has(a.id);
+  const displayAmt = isResolved ? fmt(a.offer) : isAsset ? fmt(a.current) + " bal" : fmt(a.current);
+  const cardCls = "acct-card" + (isResolved ? " resolved" : isAsset ? " asset" : "");
+
+  let bars = "";
+  if (!isAsset && a.status !== "current") {
+    const balLbl = isResolved ? "Original" : "Balance";
+    const balFill = isResolved ? "faded" : "gray";
+    bars = `<div class="bars"><div class="bar-row">
+      <span class="bar-lbl">${balLbl}</span>
+      <div class="bar-track"><div class="bar-fill ${balFill}" style="width:${currentPct}%"></div></div>
+      <span class="bar-amt">${fmt(isResolved ? a.original : a.current)}</span>
+    </div>`;
+    if (a.offer) {
+      const offerPct = Math.min(100, (parseFloat(a.offer) / barMax) * 100);
+      const pill = a.offerPct ? `<span class="pct-pill">${a.offerPct}% off</span>` : "";
+      bars += `<div class="bar-row">
+        <span class="bar-lbl green">${isResolved ? "Settled" : "Offer"}</span>
+        <div class="bar-track"><div class="bar-fill green" style="width:${offerPct}%"></div></div>
+        <span class="bar-amt green">${fmt(a.offer)} ${pill}</span>
+      </div>`;
+    }
+    bars += `</div>`;
+  }
+
+  return `<div class="${cardCls}" id="card-${a.id}">
+    <div class="acct-header" onclick="toggleCard('${a.id}')">
+      <div>
+        <div class="acct-name">${a.name}</div>
+        <div class="acct-meta">${a.creditor}${a.falloff ? " · off " + a.falloff : ""}</div>
+      </div>
+      <div class="acct-right">
+        <div class="acct-amount${isResolved ? " green" : ""}">${displayAmt}</div>
+        ${!isResolved && a.original !== a.current ? `<div class="acct-orig">orig ${fmt(a.original)}</div>` : ""}
+      </div>
+    </div>
+    ${bars}
+    <div class="card-footer">
+      <span class="badge ${st.cls}">${st.label}</span>
+      <button class="btn-edit" onclick="openEdit('${a.id}')">Edit</button>
+    </div>
+    <div class="acct-detail${isOpen ? " open" : ""}" id="detail-${a.id}">
+      <div class="acct-notes">${a.notes}</div>
+    </div>
+  </div>`;
+}
+
+function updateStats() {
+  const s = calcStats();
+  document.getElementById("stat-owed").textContent = fmt(s.totalOwed);
+  document.getElementById("stat-offers").textContent = fmt(s.withOffers);
+  document.getElementById("stat-paid").textContent = fmt(s.totalPaid);
+  document.getElementById("stat-saved").textContent = fmt(s.totalSaved) + " saved";
+  document.getElementById("stat-resolved").textContent = s.resolvedCount + " of " + data.accounts.filter(a=>a.type==="debt").length;
+  document.getElementById("score-display").textContent = data.score;
+  const c = calcCounts();
+  Object.keys(c).forEach(k => { const el = document.getElementById("count-"+k); if(el) el.textContent = c[k]; });
+}
+
+function render() { updateStats(); renderAccounts(); }
+
+function startEditScore() {
+  const display = document.getElementById("score-display");
+  const input = document.createElement("input");
+  input.className = "score-input-inline";
+  input.type = "number";
+  input.value = data.score;
+  display.replaceWith(input);
+  input.focus(); input.select();
+  function done() {
+    if (input.value) data.score = input.value;
+    save();
+    const d = document.createElement("div");
+    d.id = "score-display"; d.className = "stat-value";
+    d.textContent = data.score;
+    input.replaceWith(d);
+    showToast("Score updated");
+  }
+  input.addEventListener("blur", done);
+  input.addEventListener("keydown", e => { if(e.key==="Enter") input.blur(); });
+}
+
+function openEdit(id) {
+  editingId = id;
+  const a = data.accounts.find(x => x.id === id);
+  if (!a) return;
+  document.getElementById("modal-title").textContent = "Edit — " + a.name;
+  document.getElementById("f-current").value = a.current ?? "";
+  document.getElementById("f-offer").value = a.offer ?? "";
+  document.getElementById("f-pct").value = a.offerPct ?? "";
+  document.getElementById("f-creditor").value = a.creditor ?? "";
+  document.getElementById("f-falloff").value = a.falloff ?? "";
+  document.getElementById("f-status").value = a.status;
+  document.getElementById("f-notes").value = a.notes ?? "";
+  document.getElementById("modal-overlay").classList.add("open");
+}
+
+function closeModal() { document.getElementById("modal-overlay").classList.remove("open"); editingId = null; }
+function handleOverlayClick(e) { if (e.target === document.getElementById("modal-overlay")) closeModal(); }
+
+function saveEdit() {
+  const a = data.accounts.find(x => x.id === editingId);
+  if (!a) return;
+  a.current = parseFloat(document.getElementById("f-current").value) || 0;
+  const ro = document.getElementById("f-offer").value;
+  const rp = document.getElementById("f-pct").value;
+  a.offer = ro !== "" ? parseFloat(ro) : null;
+  a.offerPct = rp !== "" ? parseFloat(rp) : null;
+  a.creditor = document.getElementById("f-creditor").value;
+  a.falloff = document.getElementById("f-falloff").value || null;
+  a.status = document.getElementById("f-status").value;
+  a.notes = document.getElementById("f-notes").value;
+  save(); closeModal(); render();
+  showToast("Changes saved");
+}
+
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 2000);
+}
+
+document.addEventListener("keydown", e => { if(e.key==="Escape") closeModal(); });
+render();
+</script>
+</body>
+</html>
